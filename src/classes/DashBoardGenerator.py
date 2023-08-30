@@ -1,41 +1,55 @@
 import streamlit as st
-import numpy as np
 import matplotlib.pyplot as plt
+
+from src.constants.colors import *
 
 class DashBoardGenerator():
     def __init__(self, title, df):
         self.title = title
-        self.df = df
-
+        self.original_df = df
+        self.filtered_df = df.copy()
         st.title(self.title)
+    
+    def generate_side_bar(self):
+        st.sidebar.write("## Filters")
+        category_list = self.original_df['category'].unique()
+        category_list.sort()
+        val = [None]* len(category_list)
+        for i, cat in enumerate(category_list):
+            val[i] = st.sidebar.checkbox(cat, value=True) 
+        self.filtered_df = self.original_df[self.original_df.category.isin(category_list[val])].reset_index(drop=True)
+
+    def generate_card(self, title, value, delta):
+        st.metric(label=title, value=f"€ {value}", delta=delta)
 
     def generate_raw_data(self):
         st.subheader('Raw Data')
-        st.write(self.df)
+        st.dataframe(self.filtered_df)
     
-    def generate_histogram(self, column):
-        st.subheader('Histogram amount')
-        num_bins = st.slider(
-            "Select number of bins",
-            min_value=1,
-            max_value=25,
-            value=10 
-            )
-        fig, ax = plt.subplots(figsize=(8, 6))  # Set figure size
-        n, bins, patches = ax.hist(self.df[column], bins=num_bins, color='skyblue', edgecolor='black')  # Set color and edgecolor
+    def generate_bar_chart(self, column):
+        st.subheader('Amount by category')
+        amount_by_category = self.filtered_df.groupby('category')[column].sum()
+        fig, ax = plt.subplots()
+        bars = ax.bar(amount_by_category.index, amount_by_category.values, color=ACCENT_GREEN)
+        for bar in bars:
+            yval = bar.get_height()
+            yval_formated = f"€ {yval:,.2f}"
+            ax.text(bar.get_x() + bar.get_width()/2, yval + 50, yval_formated, ha='center', va='bottom', fontsize=8, color=LIGHT_GREY)
+        plt.gca().axes.get_yaxis().set_visible(False)
+        ax.tick_params(axis='x', colors=LIGHT_GREY)
+        plt.xticks(rotation=35, fontsize=8)
+        ax.set_facecolor('none')
+        for spine in ax.spines:
+            ax.spines[spine].set_visible(False)
+        fig.patch.set_facecolor(DARK_GREY)
+        st.pyplot(plt)
 
-        # Set the background color to be transparent
+    def generate_pie_chart(self, column):
+        st.subheader('Percentage by category')
+        amount_by_category = self.filtered_df.groupby('category')[column].sum().reset_index()
+        fig, ax = plt.subplots()
+        ax.pie(amount_by_category[column], labels=amount_by_category['category'], autopct='%1.1f%%', shadow=False, startangle=90)
+        plt.gca().axes.get_yaxis().set_visible(False)
         ax.set_facecolor('none')
         fig.patch.set_facecolor('none')
-
-        # Customize other appearance options
-        ax.grid(False)
-        ax.set_xlabel('Value', color='white')
-        ax.set_ylabel('Frequency', color='white')
-
-        # Customize tick font size
-        ax.tick_params(axis='both', labelsize=10, colors='grey')
-        histogram_values = np.histogram(self.df[column])[0]
-        st.pyplot(fig)
-    
-
+        st.pyplot(plt)

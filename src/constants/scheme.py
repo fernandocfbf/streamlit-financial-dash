@@ -1,0 +1,20 @@
+COLUMNS = {
+    "Número da transferência": "transfer_number",
+    "Situação": "status",
+    "Direção": "direction",
+    "Criada em": "start_date",
+    "Concluída em": "end_date",
+    "Valor da tarifa de origem": "origin_tariff_value",
+    "Moeda da tarifa de origem": "origin_tariff_currency",
+    "Valor da tarifa de destino": "destiny_tariff_value",
+    "Moeda da tarifa de destino": "destiny_tariff_currency",
+    "Nome de origem": "name_origin",
+    "Valor de origem (tarifas inclusas)": "origin_amount",
+    "Moeda de origem": "origin_currency",
+    "Nome do beneficiário": "beneficiary_name",
+    "Valor de destino (tarifas inclusas)": "destiny_amount",
+    "Moeda de destino": "destiny_currency",
+    "Taxa de câmbio": "exchange_rate",
+    "Referência": "reference",
+    "Lote": "lot"
+}
