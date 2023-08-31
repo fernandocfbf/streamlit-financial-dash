@@ -1,4 +1,5 @@
 import streamlit as st
+import datetime
 import matplotlib.pyplot as plt
 
 from src.constants.colors import *
@@ -11,7 +12,30 @@ class DashBoardGenerator():
         st.title(self.title)
     
     def generate_side_bar(self):
-        st.sidebar.write("## Filters")
+        today = datetime.datetime.now()
+        start_date, end_date = st.sidebar.date_input(
+            'Select the date range',
+            (datetime.date(2023, 1, 1), today),
+            datetime.date(2023, 1, 1),
+            today,
+            format="MM.DD.YYYY")
+        start_date = start_date.strftime("%Y-%m-%d")
+        end_date = end_date.strftime("%Y-%m-%d")
+        self.filtered_df = self.filtered_df[(self.filtered_df['start_date'].between(start_date, end_date))]
+        st.sidebar.markdown(
+            """
+            <style>
+            div[data-testid="stDateInput"] {
+            background-color: #34355B;
+            padding: 1rem;
+            aling-items: center;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.sidebar.subheader('Category')
+
         category_list = self.original_df['category'].unique()
         category_list.sort()
         val = [None]* len(category_list)
@@ -39,7 +63,8 @@ class DashBoardGenerator():
         st.dataframe(self.filtered_df)
     
     def generate_bar_chart(self, column, title, height, type='total'):
-        st.subheader(title)
+        if title:
+            st.subheader(title)
         if type == 'total':
             amount_by_category = self.filtered_df.groupby('category')[column].sum().reset_index()
         elif type == 'average':
@@ -62,13 +87,14 @@ class DashBoardGenerator():
         st.pyplot(plt)
     
     def generate_line_chart(self, column, title, height):
-        st.subheader('Amount by category')
-        time_series_amount_by_category = self.filtered_df.groupby(['year', 'month', 'category'])[column].sum().reset_index()
+        st.subheader(title)
+        time_series_amount_by_category = self.filtered_df.groupby(['year', 'month', 'month_name', 'category'])[column].sum().reset_index()
+        time_series_amount_by_category = time_series_amount_by_category.sort_values(['year', 'month'], ascending=True)
         fig, ax = plt.subplots()
         fig.set_figheight(height)
         for category in time_series_amount_by_category['category'].unique():
             category_df = time_series_amount_by_category[time_series_amount_by_category['category'] == category]
-            ax.plot(category_df['month'], category_df[column], label=category, marker='o', markersize=4, linestyle='--', linewidth=1)
+            ax.plot(category_df['month_name'], category_df[column], label=category, marker='o', markersize=2, linestyle='--', linewidth=1)
         ax.set_facecolor('none')
         fig.patch.set_facecolor(DARK_GREY)
         ax.grid(axis='y', color=LIGHT_GREY, alpha=0.3)
@@ -76,14 +102,14 @@ class DashBoardGenerator():
         ax.tick_params(axis='y', colors=LIGHT_GREY)
         plt.xticks(rotation=35, fontsize=5)
         plt.yticks(fontsize=5)
-        ax.legend(bbox_to_anchor=(0., -0.5, 1, 0.1), loc='lower left', ncol=4, mode="expand", fontsize=5, frameon=False)
+        ax.legend(bbox_to_anchor=(0., -0.6, 1, 0.1), loc='lower left', ncol=4, mode="expand", fontsize=5, frameon=False)
         for text in ax.get_legend().get_texts():
             text.set_color(LIGHT_GREY)
         for spine in ax.spines:
             ax.spines[spine].set_visible(False)
         st.pyplot(plt)
                 
-    def generate_pie_chart(self, column, title, type='total'):
+    def generate_pie_chart(self, column, title, height, type='total'):
         if title:
             st.subheader(title)
         if type == 'total':
@@ -92,14 +118,21 @@ class DashBoardGenerator():
             amount_by_category = self.filtered_df.groupby(['category', 'month'])[column].sum().reset_index()
             amount_by_category = amount_by_category.groupby('category')[column].mean().reset_index()
         fig, ax = plt.subplots()
-        ax.pie(amount_by_category[column], autopct='%1.1f%%', shadow=False, startangle=90, textprops={'color':LIGHT_GREY, 'fontsize': 8})
+        fig.set_figheight(height)
+        ax.pie(
+            amount_by_category[column],
+            labels=amount_by_category['category'],
+            autopct='%1.1f%%',
+            shadow=False,
+            startangle=90,
+            textprops={'color':LIGHT_GREY, 'fontsize': 8},
+            pctdistance=0.85,
+            explode=[0.05]*len(amount_by_category),
+            colors=GRADIENT_FOR_PIE)
         my_circle=plt.Circle( (0,0), 0.7, color=DARK_GREY)
         p=plt.gcf()
         p.gca().add_artist(my_circle)
         ax.axis('equal')
-        ax.legend(amount_by_category['category'], bbox_to_anchor=(0., -0.15, 1, 0.1), loc='lower left', ncol=4, mode="expand", fontsize=8, frameon=False)
-        for text in ax.get_legend().get_texts():
-            text.set_color(LIGHT_GREY)
         ax.set_facecolor('none')
         fig.patch.set_facecolor(DARK_GREY)
         st.pyplot(plt)

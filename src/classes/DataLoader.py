@@ -18,7 +18,8 @@ class DataLoader():
         dataframe['start_date'] = pd.to_datetime(dataframe['start_date'])
         dataframe['end_date'] = pd.to_datetime(dataframe['end_date'])
         dataframe['year'] = dataframe['start_date'].dt.year
-        dataframe['month'] = dataframe['start_date'].dt.month_name()
+        dataframe['month'] = dataframe['start_date'].dt.month
+        dataframe['month_name'] = dataframe['start_date'].dt.month_name()
         dataframe['day'] = dataframe['start_date'].dt.day
         dataframe = dataframe.merge(categories, how='left', left_on='beneficiary_name', right_on='beneficiary')
         dataframe['category'] = dataframe['category'].fillna('unknown')
@@ -44,5 +45,11 @@ class DataLoader():
         card_out_dataframe = self.dataframe.query("direction == 'OUT' and is_transfer == False")
         money_out = transfer_out_dataframe["destiny_amount"].sum() + card_out_dataframe["origin_amount"].sum()
         return round(money_out, 2)
+    
+    def get_monthly_avg_spendings(self):
+        card_transactions_dataframe = self.get_card_transactions_dataframe()
+        monthly_avg_spendings_df = card_transactions_dataframe.groupby(['year', 'month'])['origin_amount'].sum().reset_index()
+        monthly_avg_spendings = monthly_avg_spendings_df['origin_amount'].mean()
+        return round(monthly_avg_spendings, 2)
 
     
