@@ -30,25 +30,30 @@ class DataLoader():
         self.dataframe = dataframe
 
     def get_card_transactions_dataframe(self):
-        card_transactions_dataframe = self.dataframe.query("origin_currency == 'EUR' and is_transfer == False")
+        card_transactions_dataframe = self.dataframe.query("\
+            (origin_currency == 'EUR' and is_transfer == False) or \
+            (is_transfer == True and direction == 'OUT' and destiny_currency == 'EUR' and beneficiary_name == 'Erbengemeinschaft Dr. Alexey Volgin')")
         return card_transactions_dataframe
     
     def get_money_in(self):
         money_in_dataframe = self.dataframe.query("(is_transfer == True and direction == 'IN' and destiny_currency == 'EUR') or balance_conversion == True")
-        money_in_transactions = money_in_dataframe.query("is_transfer == True")['origin_amount'].sum()
+        money_in_transactions = money_in_dataframe.query("is_transfer == True")['destiny_amount'].sum()
         money_in_balance_conversion = money_in_dataframe.query("balance_conversion == True")['destiny_amount'].sum()
         total_money_in = money_in_transactions + money_in_balance_conversion
         return round(total_money_in, 2)
     
-    def get_money_out(self):
-        transfer_out_dataframe = self.dataframe.query("is_transfer == True and direction == 'OUT' and destiny_currency == 'EUR'")
-        card_out_dataframe = self.dataframe.query("direction == 'OUT' and is_transfer == False")
-        money_out = transfer_out_dataframe["destiny_amount"].sum() + card_out_dataframe["origin_amount"].sum()
+    def get_money_out(self, dataframe):
+        transfer_out_dataframe = self.dataframe.query(
+            "is_transfer == True and direction == 'OUT'\
+            and destiny_currency == 'EUR'\
+            and beneficiary_name == 'Erbengemeinschaft Dr. Alexey Volgin'")
+        card_out_dataframe = dataframe.query("direction == 'OUT' and is_transfer == False")
+        money_out = card_out_dataframe["origin_amount"].sum() + transfer_out_dataframe["destiny_amount"].sum()
         return round(money_out, 2)
     
     def get_monthly_avg_spendings(self):
-        card_transactions_dataframe = self.get_card_transactions_dataframe()
-        monthly_avg_spendings_df = card_transactions_dataframe.groupby(['year', 'month'])['origin_amount'].sum().reset_index()
+        transactions_dataframe = self.get_card_transactions_dataframe()
+        monthly_avg_spendings_df = transactions_dataframe.groupby(['year', 'month'])['origin_amount'].sum().reset_index()
         monthly_avg_spendings = monthly_avg_spendings_df['origin_amount'].mean()
         return round(monthly_avg_spendings, 2)
 

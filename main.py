@@ -10,49 +10,40 @@ from src.constants.path import LOAD_DATA_PATH
 def main():
     data_loader = DataLoader(LOAD_DATA_PATH)
     data_loader.load_data(generate_category=False)
-    dataframe = data_loader.get_card_transactions_dataframe()
-    money_in = data_loader.get_money_in()
-    money_out = data_loader.get_money_out()
-    balance = round(money_in - money_out, 2)
-    monthly_avg_spendings = data_loader.get_monthly_avg_spendings()
-    dashboard_generator = DashBoardGenerator('Personal Financial Dashboard', dataframe)
-    dashboard_generator.generate_side_bar()
-    kpi_container = st.container()
-    with kpi_container:
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-        with kpi1:
-            dashboard_generator.generate_card("Money In", money_in, None)
-        with kpi2:
-            dashboard_generator.generate_card("Money Out", money_out, None)
-        with kpi3:
-            dashboard_generator.generate_card("Balance", balance, None)
-        with kpi4:
-            dashboard_generator.generate_card("Avg. Spending", monthly_avg_spendings, None)
-
-    st.subheader('Amount by category')
-    summary_type = st.selectbox(
-    'Select the type of summary',
-    ('Total', 'Average'))
-    print(summary_type)
-    bar_chart_container = st.container()
-
-    with bar_chart_container:
-        bar_chart_total, pie_chart = st.columns([1, 1])
+    dashboard_generator = DashBoardGenerator('Personal Financial Dashboard', data_loader)
+    dashboard_generator.generate_filter()
+    dashboard_generator.generate_big_numbers()
+    chart_monthly_expenses, table_monthly_expenses = st.columns([2, 1])
+    with chart_monthly_expenses:
+        dashboard_generator.generate_montlhy_expenses_chart()
+    with table_monthly_expenses:
+        dashboard_generator.generate_dataframe_chart()
+    agg_type, cateogries_number = st.columns([1, 1])
+    summary_type = agg_type.selectbox('Select the type of summary', ('Average', 'Total'))
+    categories_number = cateogries_number.slider('Select the number of categories', 1, 10, 5)
+    bar_chart_total, pie_chart = st.columns([1, 1])
+    
+    with bar_chart_total:
         graph_type = str(summary_type).lower()
-        with bar_chart_total:
-            dashboard_generator.generate_bar_chart(
-                "origin_amount",
-                None,
-                5.65,
-                type=graph_type)
-        with pie_chart:
-            dashboard_generator.generate_pie_chart(
-                'origin_amount',
-                None,
-                4,
-                type=graph_type)
-
-    dashboard_generator.generate_line_chart('origin_amount', 'Time series: amount by category', 1.5)
+        dashboard_generator.generate_bar_chart(
+            column="origin_amount",
+            number_categories=categories_number,
+            title=f"{summary_type} amount by category",
+            height=500,
+            type=graph_type)
+    with pie_chart:
+        dashboard_generator.generate_pie_chart(
+            column="origin_amount",
+            number_categories=categories_number,
+            title=f"{summary_type} amount by category",
+            height=500,
+            type=graph_type)
+    
+    categories = st.multiselect('Select categories', dashboard_generator.filtered_df.category.unique(), default=dashboard_generator.filtered_df.category.unique())
+    dashboard_generator.generate_line_chart(
+        'origin_amount',
+        categories,
+        500)
 
     
 if __name__ == '__main__':
